@@ -23,14 +23,12 @@ use Doctrine\Search\SearchClientInterface;
 use Doctrine\Search\Mapping\ClassMetadata;
 use Doctrine\Search\Exception\NoResultException;
 use Elastica\Client as ElasticaClient;
-use Elastica\Type\Mapping;
 use Elastica\Document;
-use Elastica\Index;
+use Elastica\Mapping;
 use Elastica\Query\MatchAll;
 use Elastica\Filter\Term;
 use Elastica\Exception\NotFoundException;
 use Elastica\Search;
-use Doctrine\Common\Collections\ArrayCollection;
 use Elastica\Query;
 use Elastica\Query\Filtered;
 
@@ -68,7 +66,7 @@ class Client implements SearchClientInterface
      */
     public function addDocuments(ClassMetadata $class, array $documents)
     {
-        $type = $this->getIndex($class->index)->getType($class->type);
+        $index = $this->getIndex($class->index);
 
         $parameters = $this->getParameters($class->parameters);
 
@@ -90,9 +88,9 @@ class Client implements SearchClientInterface
         }
 
         if (count($bulk) > 1) {
-            $type->addDocuments($bulk);
+            $index->addDocuments($bulk);
         } else {
-            $type->addDocument($bulk[0]);
+            $index->addDocument($bulk[0]);
         }
     }
 
@@ -101,8 +99,10 @@ class Client implements SearchClientInterface
      */
     public function removeDocuments(ClassMetadata $class, array $documents)
     {
-        $type = $this->getIndex($class->index)->getType($class->type);
-        $type->deleteIds(array_keys($documents));
+        $index = $this->getIndex($class->index);
+	    foreach (array_keys($documents) as $id) {
+		    $index->deleteById($id);
+	    }
     }
 
     /**
@@ -110,9 +110,9 @@ class Client implements SearchClientInterface
      */
     public function removeAll(ClassMetadata $class, $query = null)
     {
-        $type = $this->getIndex($class->index)->getType($class->type);
+        $index = $this->getIndex($class->index);
         $query = $query ?: new MatchAll();
-        $type->deleteByQuery($query);
+        $index->deleteByQuery($query);
     }
 
     /**
@@ -121,8 +121,8 @@ class Client implements SearchClientInterface
     public function find(ClassMetadata $class, $id, $options = array())
     {
         try {
-            $type = $this->getIndex($class->index)->getType($class->type);
-            $document = $type->getDocument($id, $options);
+            $index = $this->getIndex($class->index);
+            $document = $index->getDocument($id, $options);
         } catch (NotFoundException $ex) {
             throw new NoResultException();
         }
@@ -163,9 +163,6 @@ class Client implements SearchClientInterface
             if ($class->index) {
                 $indexObject = $this->getIndex($class->index);
                 $searchQuery->addIndex($indexObject);
-                if ($class->type) {
-                    $searchQuery->addType($indexObject->getType($class->type));
-                }
             }
         }
         return $searchQuery;
@@ -218,25 +215,20 @@ class Client implements SearchClientInterface
      */
     public function createType(ClassMetadata $metadata)
     {
-        $type = $this->getIndex($metadata->index)->getType($metadata->type);
         $properties = $this->getMapping($metadata->fieldMappings);
         $rootProperties = $this->getRootMapping($metadata->rootMappings);
 
-        $mapping = new Mapping($type, $properties);
+        $mapping = new Mapping($properties);
         $mapping->disableSource($metadata->source);
         if (isset($metadata->boost)) {
             $mapping->setParam('_boost', array('name' => '_boost', 'null_value' => $metadata->boost));
-        }
-        if (isset($metadata->parent)) {
-            $mapping->setParent($metadata->parent);
         }
         foreach ($rootProperties as $key => $value) {
             $mapping->setParam($key, $value);
         }
 
-        $mapping->send();
-
-        return $type;
+	    $index = $this->getIndex($metadata->index);
+        $mapping->send($index);
     }
 
     /**
@@ -244,8 +236,8 @@ class Client implements SearchClientInterface
      */
     public function deleteType(ClassMetadata $metadata)
     {
-        $type = $this->getIndex($metadata->index)->getType($metadata->type);
-        return $type->delete();
+        $index = $this->getIndex($metadata->index);
+        return $index->delete();
     }
 
     /**
@@ -264,7 +256,7 @@ class Client implements SearchClientInterface
 
             if (isset($fieldMapping['type'])) {
                 $properties[$propertyName]['type'] = $fieldMapping['type'];
- 
+
                 if ($fieldMapping['type'] == 'attachment' && isset($fieldMapping['fields'])) {
                     $callback = function ($field) {
                         unset($field['type']);
@@ -276,7 +268,7 @@ class Client implements SearchClientInterface
                 if (in_array($fieldMapping['type'], array('multi_field', 'text', 'keyword')) && isset($fieldMapping['fields'])) {
                     $properties[$propertyName]['fields'] = $this->getMapping($fieldMapping['fields']);
                 }
-  
+
                 if (in_array($fieldMapping['type'], array('nested', 'object')) && isset($fieldMapping['properties'])) {
                     $properties[$propertyName]['properties'] = $this->getMapping($fieldMapping['properties']);
                 }
