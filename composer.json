@@ -1,5 +1,5 @@
 {
-    "name": "doctrine/search",
+    "name": "lekarna/search",
     "description": "ElasticSearch and Solr entity mapping library",
     "keywords": ["elasticsearch", "solr", "lucene", "search", "odm", "orm"],
     "homepage": "https://github.com/doctrine/search",
