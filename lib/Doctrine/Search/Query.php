@@ -256,7 +256,7 @@ class Query
         // TODO: abstraction of support for different result sets
         if ($resultSet instanceof Elastica\ResultSet) {
             $this->count = $resultSet->getTotalHits();
-            $this->facets = $resultSet->getFacets();
+            $this->facets = $resultSet->getAggregations();
             $results = $resultSet->getResults();
 
         } else {

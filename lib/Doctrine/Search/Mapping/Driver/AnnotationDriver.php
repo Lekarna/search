@@ -163,8 +163,8 @@ class AnnotationDriver extends AbstractAnnotationDriver
         
         if (isset($fieldMapping['type'])) {
             $mapping['type'] = $fieldMapping['type'];
-            
-            if ($fieldMapping['type'] == 'multi_field' && isset($fieldMapping['fields'])) {
+
+            if (($fieldMapping['type'] == 'text' || $fieldMapping['type'] == 'keyword') && isset($fieldMapping['fields'])) {
                 foreach ($fieldMapping['fields'] as $name => $subFieldMapping) {
                     $subFieldMapping = (array) $subFieldMapping;
                     $mapping['fields'][] = $this->fieldToArray($name, $subFieldMapping);
@@ -177,6 +177,12 @@ class AnnotationDriver extends AbstractAnnotationDriver
                     $mapping['properties'][] = $this->fieldToArray($name, $subFieldMapping);
                 }
             }
+        }
+        if (isset($fieldMapping['norms'])) {
+            $mapping['norms'] = (bool) $fieldMapping['norms'];
+        }
+        if (isset($fieldMapping['similarity'])) {
+            $mapping['similarity'] = $fieldMapping['similarity'];
         }
         if (isset($fieldMapping['boost'])) {
             $mapping['boost'] = $fieldMapping['boost'];

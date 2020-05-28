@@ -273,7 +273,7 @@ class Client implements SearchClientInterface
                     $properties[$propertyName]['fields'] = array_map($callback, $this->getMapping($fieldMapping['fields']));
                 }
 
-                if ($fieldMapping['type'] == 'multi_field' && isset($fieldMapping['fields'])) {
+                if (in_array($fieldMapping['type'], array('multi_field', 'text', 'keyword')) && isset($fieldMapping['fields'])) {
                     $properties[$propertyName]['fields'] = $this->getMapping($fieldMapping['fields']);
                 }
   
@@ -324,6 +324,14 @@ class Client implements SearchClientInterface
 
             if (isset($fieldMapping['geohash_prefix'])) {
                 $properties[$propertyName]['geohash_prefix'] = $fieldMapping['geohash_prefix'];
+            }
+
+            if (isset($fieldMapping['norms'])) {
+                $properties[$propertyName]['norms'] = $fieldMapping['norms'];
+            }
+
+            if (isset($fieldMapping['similarity'])) {
+                $properties[$propertyName]['similarity'] = $fieldMapping['similarity'];
             }
         }
 

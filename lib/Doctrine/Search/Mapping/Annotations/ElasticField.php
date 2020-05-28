@@ -86,4 +86,15 @@ final class ElasticField extends Field
      * @var boolean
      */
     public $geohash_prefix;
+
+	/**
+	 * @var boolean
+	 */
+    public $norms;
+
+	/**
+	 * @var string
+	 */
+    public $similarity;
+
 }
